@@ -81,6 +81,7 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
     \
     int A##_create(N *kdt, VN *ref, size_t dim); \
     ssize_t A##_nearest(N *kdt, VN *pt, double *squared_dist); \
+    void A##_free(N *kdt); \
 
 
 #define KDTREE_IMPLEMENT(N, A, T, VN, VA) \
@@ -90,6 +91,7 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
     KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA); \
     KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA); \
     KDTREE_IMPLEMENT_NEAREST(N, A, T, VN, VA); \
+    KDTREE_IMPLEMENT_FREE(N, A, T, VN, VA); \
 
 #define KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA) \
     static inline ssize_t A##_static_median(N *kdt, size_t i0, size_t iE, size_t i_dim) \
@@ -184,6 +186,7 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
         assert(pt); \
         if(root < 0) return; \
         double d = A##_static_dist(kdt, root, pt); \
+        /*printf("dist [%zu] %.2f, i_dim %zu\n", root*kdt->dim, d, i_dim);*/\
         T a = VA##_get_at(kdt->ref, root + i_dim); \
         T b = VA##_get_at(pt, i_dim); \
         double dx = a - b; \
@@ -196,8 +199,7 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
         if(!*dist) return; \
         if(++i_dim >= kdt->dim) i_dim = 0; \
         KDTreeNode *r = kdtree_buckets_get_at(&kdt->buckets, root); \
-        A##_static_nearest(kdt, dx > 0 ? r->left : r->right, pt, i_dim, best, dist); \
-        if(dx2 >= *dist) return; \
+        if(dx2 <= *dist) A##_static_nearest(kdt, dx > 0 ? r->left : r->right, pt, i_dim, best, dist); \
         A##_static_nearest(kdt, dx > 0 ? r->right : r->left, pt, i_dim, best, dist); \
     }
 
@@ -211,8 +213,15 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
         *squared_dist = INFINITY; \
         ssize_t best = -1LL; \
         A##_static_nearest(kdt, kdt->root, pt, 0, &best, squared_dist); \
-        /*if(best != -1LL) best *= kdt->dim;*/ \
         return best * kdt->dim; \
+    }
+
+#define KDTREE_IMPLEMENT_FREE(N, A, T, VN, VA) \
+    void A##_free(N *kdt) \
+    { \
+        assert(kdt); \
+        kdtree_buckets_free(&kdt->buckets); \
+        memset(kdt, 0, sizeof(*kdt)); \
     }
 
 KDTREE_INCLUDE(KDTrD, kdtrd, double, Vec1d);

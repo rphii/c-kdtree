@@ -1,5 +1,5 @@
 CC 		:= gcc
-CFLAGS 	:= -Werror -Wall -pipe -march=native -O3 #-pg
+CFLAGS 	:= -Werror -Wall -pipe #-march=native -O3 -DNDEBUG #-pg
 LDFLAGS := #-lm #-pg
 CSUFFIX := .c
 HSUFFIX := .h
