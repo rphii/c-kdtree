@@ -37,6 +37,10 @@ typedef struct KDTreeNode {
     size_t index;
 } KDTreeNode;
 
+#define KDTREE_MODE_BY_REF  *
+#define KDTREE_MODE_BY_VAL
+#define KDTREE_MODE(M)  KDTREE_MODE_##M
+
 VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 
 /*
@@ -45,6 +49,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
  * T = name of the type struct
  * VN = name of the vector type based around T
  * VA = abbreviation of the vector based around T (assumes that implementations are present)
+ * M = mode of the vector VN
  */
 
 #define KDTREE_INCLUDE(N, A, T, VN) \
@@ -60,16 +65,17 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     void A##_free(N *kdt); \
 
 
-#define KDTREE_IMPLEMENT(N, A, T, VN, VA) \
-    KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA); \
-    KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA); \
+#define KDTREE_IMPLEMENT(N, A, T, VN, VA, M) \
+    KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA, M); \
+    KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA, M); \
     KDTREE_IMPLEMENT_CREATE(N, A, T, VN, VA); \
-    KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA); \
-    KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA); \
+    KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA, M); \
+    KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA, M); \
     KDTREE_IMPLEMENT_NEAREST(N, A, T, VN, VA); \
     KDTREE_IMPLEMENT_FREE(N, A, T, VN, VA); \
 
-#define KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA) \
+
+#define KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA, M) \
     static inline ssize_t A##_static_median(N *kdt, size_t i0, size_t iE, size_t i_dim) \
     { \
         assert(kdt); \
@@ -81,12 +87,12 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         size_t p = 0; \
         for(;;) { \
             size_t i_pivot = kdtree_buckets_get_at(&kdt->buckets, md)->index; \
-            T pivot = VA##_get_at(kdt->ref, i_pivot + i_dim); \
+            T pivot = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_pivot + i_dim); \
             KDTREE_SWAP(T, kdt->buckets.items[md]->index, kdt->buckets.items[iE - 1]->index); \
             store = i0; \
             for(p = i0; p < iE; p++) { \
                 size_t i_p = kdtree_buckets_get_at(&kdt->buckets, p)->index; \
-                T p_x = VA##_get_at(kdt->ref, i_p + i_dim); \
+                T p_x = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_p + i_dim); \
                 if(p_x < pivot) { \
                     if(p != store) { \
                         KDTREE_SWAP(T, kdt->buckets.items[p]->index, kdt->buckets.items[store]->index); \
@@ -97,9 +103,9 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
             KDTREE_SWAP(T, kdt->buckets.items[store]->index, kdt->buckets.items[iE - 1]->index); \
             /* median has duplicate values */ \
             size_t i_s = kdtree_buckets_get_at(&kdt->buckets, store)->index; \
-            T v_s = VA##_get_at(kdt->ref, i_s + i_dim); \
+            T v_s = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_s + i_dim); \
             size_t i_m = kdtree_buckets_get_at(&kdt->buckets, md)->index; \
-            T v_m = VA##_get_at(kdt->ref, i_m + i_dim); \
+            T v_m = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_m + i_dim); \
             if(v_s == v_m) { return md; } \
             if(store > md) iE = store; \
             else i0 = store; \
@@ -107,7 +113,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         return 0; \
     }
 
-#define KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA) \
+#define KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA, M) \
     static inline ssize_t A##_static_create(N *kdt, size_t i0, size_t iE, size_t i_dim) \
     { \
         assert(kdt->ref); \
@@ -139,21 +145,21 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     }
 
 
-#define KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA) \
+#define KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA, M) \
     static inline double A##_static_dist(N *kdt, ssize_t index, VN *pt) \
     { \
         size_t i_dim = kdt->dim; \
         T d = 0; \
         while(i_dim--) { \
-            T a = VA##_get_at(kdt->ref, index * kdt->dim + i_dim); \
-            T b = VA##_get_at(pt, i_dim); \
+            T a = KDTREE_MODE(M) VA##_get_at(kdt->ref, index * kdt->dim + i_dim); \
+            T b = KDTREE_MODE(M) VA##_get_at(pt, i_dim); \
             double t = a - b; \
             d += t * t; \
         } \
         return d; \
     }
 
-#define KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA) \
+#define KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA, M) \
     static inline void A##_static_nearest(N *kdt, ssize_t root, VN *pt, size_t i_dim, ssize_t *best, double *dist) \
     { \
         assert(kdt); \
@@ -163,8 +169,8 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         if(root < 0) return; \
         double d = A##_static_dist(kdt, root, pt); \
         /*printf("dist [%zu] %.2f, i_dim %zu\n", root*kdt->dim, d, i_dim);*/\
-        T a = VA##_get_at(kdt->ref, root + i_dim); \
-        T b = VA##_get_at(pt, i_dim); \
+        T a = KDTREE_MODE(M) VA##_get_at(kdt->ref, root + i_dim); \
+        T b = KDTREE_MODE(M) VA##_get_at(pt, i_dim); \
         double dx = a - b; \
         double dx2 = dx * dx; \
         if(!*best || d < *dist) { \

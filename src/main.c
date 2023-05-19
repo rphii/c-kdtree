@@ -13,23 +13,6 @@
 #define LOG_DO          1
 #define LOG(...)        if(LOG_DO) { printf(__VA_ARGS__); }
 
-void vec1d_print_n(Vec1d *vec, size_t i0, size_t n, char *end)
-{
-    LOG("(");
-    for(size_t i = 0; i < n; i++) {
-        LOG("%.2f, ", vec1d_get_at(vec, i0+i));
-    }
-    LOG("\b\b)%s", end);
-}
-
-void kdtrd_print(KDTrD *kdt, ssize_t root, size_t spaces)
-{
-    if(root < 0) return;
-    printf("%*s%zu ", (int)spaces, "", kdt->buckets.items[root]->index);
-    vec1d_print_n(kdt->ref, kdt->buckets.items[root]->index, kdt->dim, "\n");
-    kdtrd_print(kdt, kdt->buckets.items[root]->left, spaces + 1);
-    kdtrd_print(kdt, kdt->buckets.items[root]->right, spaces + 1);
-}
 
 int main(void)
 {
@@ -45,7 +28,8 @@ int main(void)
     /* create random array to search on */
     LOG("creating random array (%zux%zu)\n", n, dims);
     for(size_t i = 0; i < n * dims; i++) {
-        vec1d_push_back(&arr, RAND_DOUBLE);
+        double val = RAND_DOUBLE;
+        vec1d_push_back(&arr, val);
     }
     /* create kdtree */
     LOG("creating kdtree of array (%zux%zu)\n", arr.len / dims, dims);
@@ -56,7 +40,8 @@ int main(void)
         LOG("[%7zu] ", i);
         /* create random point to find nearest */
         for(size_t i = 0; i < dims; i++) {
-            vec1d_push_back(&find, RAND_DOUBLE);
+            double val = RAND_DOUBLE;
+            vec1d_push_back(&find, val);
         }
         LOG("find : ");
         vec1d_print_n(&find, 0, dims, " ");

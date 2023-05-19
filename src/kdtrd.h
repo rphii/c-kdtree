@@ -5,5 +5,7 @@
 
 KDTREE_INCLUDE(KDTrD, kdtrd, double, Vec1d);
 
+void kdtrd_print(KDTrD *kdt, ssize_t root, size_t spaces);
+
 #define KDTRD_H
 #endif
