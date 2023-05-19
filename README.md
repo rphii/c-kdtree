@@ -34,20 +34,20 @@ In the example I've also done that, and added a function to each of the .c files
 ```c
 [double_vec.h]
 #include "vec.h"
-VEC_INCLUDE(DoubleVec, doublevec, int, BY_VAL)
+VEC_INCLUDE(DoubleVec, doublevec, double, BY_VAL)
 
 [double_vec.c]
 #include "double_vec.h"
-VEC_IMPLEMENT(DoubleVec, doublevec, int, BY_VAL, 0)
+VEC_IMPLEMENT(DoubleVec, doublevec, double, BY_VAL, 0)
 
 [double_kdtree.h]
 #include "kdtree.h"
 #include "double_vec.h"
-KDTREE_INCLUDE(DoubleKDTree, double_kdtree, int, DoubleVec)
+KDTREE_INCLUDE(DoubleKDTree, double_kdtree, double, DoubleVec)
 
 [double_kdtree.c]
 #include "double_file.h"
-KDTREE_IMPLEMENT(DoubleKDTree, double_kdtree, int, DoubleVec, doublevec, BY_VAL)
+KDTREE_IMPLEMENT(DoubleKDTree, double_kdtree, double, DoubleVec, doublevec, BY_VAL)
 ```
 
 ### `int` based KD-tree
