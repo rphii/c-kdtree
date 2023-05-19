@@ -14,8 +14,8 @@ The previously stated header provides two defines:
 
 ```c
 #include "kdtree.h"
-KDTREE_INCLUDE(N, A, T, VN)
-KDTREE_IMPLEMENT(N, A, T, VN, VA, M)
+KDTREE_INCLUDE(N, A, T, VN);
+KDTREE_IMPLEMENT(N, A, T, VN, VA, M);
 ```
 
 1. `N` - **N**ame - name of the resulting KD-tree struct
@@ -29,7 +29,7 @@ KDTREE_IMPLEMENT(N, A, T, VN, VA, M)
 I'd split up the INCLUDEs from the IMPLEMENTATIONs. This allows for increased modularity.
 In the example I've also done that, and added a function to each of the .c files that's not implemented by default.
 
-### Double Based KD-tree
+### `double` based KD-tree
 
 ```c
 [double_vec.h]
@@ -50,7 +50,7 @@ KDTREE_INCLUDE(DoubleKDTree, double_kdtree, int, DoubleVec)
 KDTREE_IMPLEMENT(DoubleKDTree, double_kdtree, int, DoubleVec, doublevec, BY_VAL)
 ```
 
-### Int Based KD-tree
+### `int` based KD-tree
 
 ```c
 [int_vec.h]
