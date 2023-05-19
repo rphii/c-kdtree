@@ -29,7 +29,7 @@ SOFTWARE. */
 
 #include "vec.h"
 
-#define KDT_MAX_DIM     3
+#define KDTREE_SWAP(T, x,y)   {T t = x; x = y; y = t; }
 
 typedef struct KDTreeNode {
     ssize_t left;
@@ -37,31 +37,7 @@ typedef struct KDTreeNode {
     size_t index;
 } KDTreeNode;
 
-#define KDTREE_SWAP(T, x,y)   {T t = x; x = y; y = t; }
-
-typedef struct Point3d {
-    double x[3];
-} Point3d;
-
-VEC_INCLUDE(Vec3d, vec3d, Point3d, BY_VAL);
-
-VEC_INCLUDE(Vec1d, vec1d, double, BY_VAL);
 VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
-
-typedef struct KDTree {
-    Vec3d *arr;
-    KDTreeBuckets buckets;
-    size_t dim;
-    ssize_t root;
-} KDTree;
-
-void buckets_print(KDTree *kdt);
-void vec3d_print(Vec3d *vec);
-
-
-int kdtree_create(KDTree *kdt, Vec3d *arr);
-ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
-
 
 /*
  * N = name of the kdtree struct
@@ -224,28 +200,7 @@ ssize_t kdtree_nearest(KDTree *kdt, Point3d *pt, double *dist);
         memset(kdt, 0, sizeof(*kdt)); \
     }
 
-KDTREE_INCLUDE(KDTrD, kdtrd, double, Vec1d);
 
-#if 0
-
-typedef struct KDTreeNode {
-    struct KDTreeNode *left;
-    struct KDTreeNode *right;
-    size_t index;
-} KDTreeNode;
-
-VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_VAL);
-typedef struct KDTree {
-    KDTreeBuckets buckets;
-    KDTreeNode *root;
-    size_t dim;
-} KDTree;
-
-
-/* public functions */
-void kdtree_create(KDTree *kdt, Vec3d); /* calls */
-size_t kdtree_nearest(KDTree *kdt, KDTreeValue find, double *best_dist);
-#endif
 
 
 #define KDTREE_H
