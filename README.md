@@ -29,43 +29,27 @@ In the example I've also done that, and added a function to each of the .c files
 ### `double` based KD-tree
 
 ```c
-[double_vec.h]
-#include "vec.h"
-VEC_INCLUDE(DoubleVec, doublevec, double, BY_VAL)
-
-[double_vec.c]
-#include "double_vec.h"
-VEC_IMPLEMENT(DoubleVec, doublevec, double, BY_VAL, 0)
-
 [double_kdtree.h]
 #include "kdtree.h"
 #include "double_vec.h"
-KDTREE_INCLUDE(DoubleKDTree, double_kdtree, double, DoubleVec)
+KDTREE_INCLUDE(DoubleKDTree, double_kdtree, double)
 
 [double_kdtree.c]
 #include "double_file.h"
-KDTREE_IMPLEMENT(DoubleKDTree, double_kdtree, double, DoubleVec, doublevec, BY_VAL)
+KDTREE_IMPLEMENT(DoubleKDTree, double_kdtree, double)
 ```
 
 ### `int` based KD-tree
 
 ```c
-[int_vec.h]
-#include "vec.h"
-VEC_INCLUDE(IntVec, intvec, int, BY_VAL)
-
-[int_vec.c]
-#include "int_vec.h"
-VEC_IMPLEMENT(IntVec, intvec, int, BY_VAL, 0)
-
 [int_kdtree.h]
 #include "kdtree.h"
 #include "int_vec.h"
-KDTREE_INCLUDE(IntKDTree, int_kdtree, int, IntVec)
+KDTREE_INCLUDE(IntKDTree, int_kdtree, int)
 
 [int_kdtree.c]
 #include "int_file.h"
-KDTREE_IMPLEMENT(IntKDTree, int_kdtree, int, IntVec, intvec, BY_VAL)
+KDTREE_IMPLEMENT(IntKDTree, int_kdtree, int)
 ```
 
 ## How to use it
