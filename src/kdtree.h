@@ -30,6 +30,7 @@ SOFTWARE. */
 #include "vec.h"
 
 #define KDTREE_SWAP(T, x,y)   {T t = x; x = y; y = t; }
+#define KDTREE_DEBUG    1
 
 typedef struct KDTreeNode {
     ssize_t left;
@@ -37,75 +38,81 @@ typedef struct KDTreeNode {
     size_t index;
 } KDTreeNode;
 
-#define KDTREE_MODE_BY_REF  *
-#define KDTREE_MODE_BY_VAL
-#define KDTREE_MODE(M)  KDTREE_MODE_##M
-
 VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 
 /*
  * N = name of the kdtree struct
  * A = abbreviation of the kdtree functions
  * T = name of the type struct
- * VN = name of the vector type based around T
- * VA = abbreviation of the vector based around T (assumes that implementations are present)
- * M = mode of the vector VN
  */
 
-#define KDTREE_INCLUDE(N, A, T, VN) \
+#define KDTREE_INCLUDE(N, A, T) \
     typedef struct N { \
         KDTreeBuckets buckets; \
-        VN *ref; \
-        size_t dim; \
-        ssize_t root; \
+        T* ref; \
+        size_t len;   /* length of ref array */ \
+        size_t dim;   /* count of dimensions */ \
+        size_t stride; \
+        ssize_t root; /* root returned from create */ \
     } N; \
     \
-    int A##_create(N *kdt, VN *ref, size_t dim); \
-    ssize_t A##_nearest(N *kdt, VN *pt, double *squared_dist); \
-    void A##_free(N *kdt); \
+    int A##_create(N *tree , T *ref, size_t len, size_t dim, size_t offset, size_t stride); \
+    ssize_t A##_nearest(N *tree , T *pt, double *squared_dist); \
+    void A##_free(N *tree ); \
 
 
-#define KDTREE_IMPLEMENT(N, A, T, VN, VA, M) \
-    KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA, M); \
-    KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA, M); \
-    KDTREE_IMPLEMENT_CREATE(N, A, T, VN, VA); \
-    KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA, M); \
-    KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA, M); \
-    KDTREE_IMPLEMENT_NEAREST(N, A, T, VN, VA); \
-    KDTREE_IMPLEMENT_FREE(N, A, T, VN, VA); \
+#define KDTREE_IMPLEMENT(N, A, T) \
+    KDTREE_IMPLEMENT_STATIC_GET_AT(N, A, T); \
+    KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T); \
+    KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T); \
+    KDTREE_IMPLEMENT_CREATE(N, A, T); \
+    KDTREE_IMPLEMENT_STATIC_DISTANCE(N, A, T); \
+    KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T); \
+    KDTREE_IMPLEMENT_NEAREST(N, A, T); \
+    KDTREE_IMPLEMENT_FREE(N, A, T); \
 
+#define KDTREE_IMPLEMENT_STATIC_GET_AT(N, A, T) \
+    T A##_static_get_at(T *ref, size_t index, size_t len) { \
+        if(KDTREE_DEBUG) { \
+            if(index >= len) { \
+                printf("\n>> accessing index %zu / len %zu\n", index, len); \
+            } \
+        } \
+        assert(index < len); \
+        return ref[index]; \
+    }
 
-#define KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T, VN, VA, M) \
-    static inline ssize_t A##_static_median(N *kdt, size_t i0, size_t iE, size_t i_dim) \
-    { \
-        assert(kdt); \
-        assert(kdt->ref); \
+#define KDTREE_IMPLEMENT_STATIC_MEDIAN(N, A, T) \
+    static inline ssize_t A##_static_median(N *tree , size_t i0, size_t iE, size_t i_dim) { \
+        assert(tree); \
+        assert(tree->ref); \
         if(iE <= i0) return -1LL; \
         if(iE == i0 + 1) return i0; \
         size_t md = i0 + (iE - i0) / 2; \
         size_t store = 0; \
         size_t p = 0; \
         for(;;) { \
-            size_t i_pivot = kdtree_buckets_get_at(&kdt->buckets, md)->index; \
-            T pivot = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_pivot + i_dim); \
-            KDTREE_SWAP(T, kdt->buckets.items[md]->index, kdt->buckets.items[iE - 1]->index); \
+            size_t i_pivot = kdtree_buckets_get_at(&tree->buckets, md)->index; \
+            T pivot = A##_static_get_at(tree->ref, i_pivot + i_dim, tree->len); \
+            KDTREE_SWAP(T, tree->buckets.items[md]->index, tree->buckets.items[iE - 1]->index); \
             store = i0; \
-            for(p = i0; p < iE; p++) { \
-                size_t i_p = kdtree_buckets_get_at(&kdt->buckets, p)->index; \
-                T p_x = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_p + i_dim); \
+            for(p = i0; p < iE - 1; p++) { \
+                size_t i_p = kdtree_buckets_get_at(&tree->buckets, p)->index; \
+                T p_x = A##_static_get_at(tree->ref, i_p + i_dim, tree->len); \
                 if(p_x < pivot) { \
                     if(p != store) { \
-                        KDTREE_SWAP(T, kdt->buckets.items[p]->index, kdt->buckets.items[store]->index); \
+                        KDTREE_SWAP(T, tree->buckets.items[p]->index, tree->buckets.items[store]->index); \
                     } \
                     store++; \
+                    assert(store < tree->buckets.len); \
                 } \
             } \
-            KDTREE_SWAP(T, kdt->buckets.items[store]->index, kdt->buckets.items[iE - 1]->index); \
+            KDTREE_SWAP(T, tree->buckets.items[store]->index, tree->buckets.items[iE - 1]->index); \
             /* median has duplicate values */ \
-            size_t i_s = kdtree_buckets_get_at(&kdt->buckets, store)->index; \
-            T v_s = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_s + i_dim); \
-            size_t i_m = kdtree_buckets_get_at(&kdt->buckets, md)->index; \
-            T v_m = KDTREE_MODE(M) VA##_get_at(kdt->ref, i_m + i_dim); \
+            size_t i_s = kdtree_buckets_get_at(&tree->buckets, store)->index; \
+            T v_s = A##_static_get_at(tree->ref, i_s + i_dim, tree->len); \
+            size_t i_m = kdtree_buckets_get_at(&tree->buckets, md)->index; \
+            T v_m = A##_static_get_at(tree->ref, i_m + i_dim, tree->len); \
             if(v_s == v_m) { return md; } \
             if(store > md) iE = store; \
             else i0 = store; \
@@ -113,100 +120,103 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         return 0; \
     }
 
-#define KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T, VN, VA, M) \
-    static inline ssize_t A##_static_create(N *kdt, size_t i0, size_t iE, size_t i_dim) \
-    { \
-        assert(kdt->ref); \
+#define KDTREE_IMPLEMENT_STATIC_CREATE(N, A, T) \
+    static inline ssize_t A##_static_create(N *tree , size_t i0, size_t iE, size_t i_dim) { \
+        assert(tree->ref); \
         if(!iE) return -1LL; \
-        ssize_t m = A##_static_median(kdt, i0, iE, i_dim); \
+        ssize_t m = A##_static_median(tree, i0, iE, i_dim); \
         if(m >= 0) { \
-            i_dim = (i_dim + 1) % kdt->dim; \
-            KDTreeNode *n = kdtree_buckets_get_at(&kdt->buckets, m); \
-            n->left = A##_static_create(kdt, i0, m, i_dim); \
-            n->right = A##_static_create(kdt, m + 1, iE, i_dim); \
+            i_dim = (i_dim + 1) % tree->dim; \
+            KDTreeNode *n = kdtree_buckets_get_at(&tree->buckets, m); \
+            n->left = A##_static_create(tree, i0, m, i_dim); \
+            n->right = A##_static_create(tree, m + 1, iE, i_dim); \
         } \
         return m; \
     }
 
-#define KDTREE_IMPLEMENT_CREATE(N, A, T, VN, VA) \
-    int A##_create(N *kdt, VN *ref, size_t dim) \
-    { \
-        assert(kdt); \
-        assert(ref); \
+#define KDTREE_IMPLEMENT_CREATE(N, A, T) \
+    int A##_create(N *tree , T *ref, size_t len, size_t dim, size_t offset, size_t stride) { \
         assert(dim); \
-        kdt->ref = ref; \
-        kdt->dim = dim; \
-        assert(!(ref->len % dim)); \
-        for(size_t i = 0; i < ref->len; i += dim) { \
-            kdtree_buckets_push_back(&kdt->buckets, &(KDTreeNode){.index = i}); \
+        assert(tree); \
+        assert(ref); \
+        tree->ref = ref; \
+        tree->len = len; \
+        tree->dim = dim; \
+        if(!stride) stride = dim; \
+        tree->stride = stride; \
+        for(size_t i = offset; i < len; i += stride) { \
+            for(size_t j = 0; j < stride; j += dim) { \
+                kdtree_buckets_push_back(&tree->buckets, &(KDTreeNode){.index = i + j}); \
+            } \
         } \
-        kdt->root = A##_static_create(kdt, 0, kdt->buckets.len, 0); \
+        tree->len = tree->buckets.len * tree->dim; \
+        tree->root = A##_static_create(tree, 0, tree->buckets.len, 0); \
         return 0; \
     }
 
-
-#define KDTREE_IMPLEMENT_STATIC_DIST(N, A, T, VN, VA, M) \
-    static inline double A##_static_dist(N *kdt, ssize_t index, VN *pt) \
-    { \
-        size_t i_dim = kdt->dim; \
-        T d = 0; \
-        while(i_dim--) { \
-            T a = KDTREE_MODE(M) VA##_get_at(kdt->ref, index * kdt->dim + i_dim); \
-            T b = KDTREE_MODE(M) VA##_get_at(pt, i_dim); \
-            double t = a - b; \
-            d += t * t; \
+#define KDTREE_IMPLEMENT_STATIC_DISTANCE(N, A, T) \
+    double A##_static_distance(size_t dim, T *x, T *y) { \
+        double d = 0; \
+        for(size_t i = 0; i < dim; i++) { \
+            d += (x[i] - y[i]) * (x[i] - y[i]); \
         } \
         return d; \
     }
 
-#define KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T, VN, VA, M) \
-    static inline void A##_static_nearest(N *kdt, ssize_t root, VN *pt, size_t i_dim, ssize_t *best, double *dist) \
-    { \
-        assert(kdt); \
-        assert(best); \
-        assert(dist); \
-        assert(pt); \
+#define KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T) \
+    static inline void A##_static_nearest(N* tree, ssize_t root, T* pt, size_t i_dim, ssize_t *best, double *best_dist) { \
         if(root < 0) return; \
-        double d = A##_static_dist(kdt, root, pt); \
-        /*printf("dist [%zu] %.2f, i_dim %zu\n", root*kdt->dim, d, i_dim);*/\
-        T a = KDTREE_MODE(M) VA##_get_at(kdt->ref, root + i_dim); \
-        T b = KDTREE_MODE(M) VA##_get_at(pt, i_dim); \
-        double dx = a - b; \
-        double dx2 = dx * dx; \
-        if(!*best || d < *dist) { \
-            *dist = d; \
+        /* Get the current node from the KDTree */ \
+        KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
+        /* Calculate the distance from the target point to the current node */ \
+        double currentDistance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
+        if(*best < 0 || currentDistance < *best_dist) { \
             *best = root; \
+            *best_dist = currentDistance; \
         } \
-        /* if chance of exact match is high */ \
-        if(!*dist) return; \
-        if(++i_dim >= kdt->dim) i_dim = 0; \
-        KDTreeNode *r = kdtree_buckets_get_at(&kdt->buckets, root); \
-        if(dx2 <= *dist) A##_static_nearest(kdt, dx > 0 ? r->left : r->right, pt, i_dim, best, dist); \
-        A##_static_nearest(kdt, dx > 0 ? r->right : r->left, pt, i_dim, best, dist); \
+        if(!currentDistance || !*best_dist) { return; } \
+        /* Calculate the distance from the target point to the splitting dimension of the current node */ \
+        T a = A##_static_get_at(tree->ref, node->index + i_dim, tree->len); \
+        T b = A##_static_get_at(pt, i_dim, tree->dim); \
+        double splittingDistance = b - a; \
+        double dx2 = splittingDistance * splittingDistance; \
+        /* Traverse the KDTree based on the splitting dimension and the distance to the target */ \
+        ssize_t nearerNode; \
+        ssize_t furtherNode; \
+        if (splittingDistance <= 0) { \
+            nearerNode = node->left; \
+            furtherNode = node->right; \
+        } else { \
+            nearerNode = node->right; \
+            furtherNode = node->left; \
+        } \
+        if(++i_dim >= tree->dim) i_dim = 0; \
+        /* Search the nearest point in the nearer subtree */ \
+        A##_static_nearest(tree, nearerNode, pt, i_dim, best, best_dist); \
+        /* Search the nearest point in the further subtree if necessary */ \
+        if(dx2 >= *best_dist) { return; } \
+        A##_static_nearest(tree, furtherNode, pt, i_dim, best, best_dist); \
     }
 
-#define KDTREE_IMPLEMENT_NEAREST(N, A, T, VN, VA) \
-    ssize_t A##_nearest(N *kdt, VN *pt, double *squared_dist) \
-    { \
-        assert(kdt); \
+#define KDTREE_IMPLEMENT_NEAREST(N, A, T); \
+    ssize_t A##_nearest(N *tree, T *pt, double *dist) { \
+        assert(tree); \
         assert(pt); \
-        double dist_temp = 0; \
-        if(!squared_dist) squared_dist = &dist_temp; \
-        *squared_dist = INFINITY; \
-        ssize_t best = -1LL; \
-        A##_static_nearest(kdt, kdt->root, pt, 0, &best, squared_dist); \
-        return best * kdt->dim; \
+        double temp_dist = 0; \
+        if(!dist) dist = &temp_dist; \
+        *dist = INFINITY; \
+        ssize_t i = -1; \
+        A##_static_nearest(tree, tree->root, pt, 0, &i, dist); \
+        ssize_t result = i >= 0 ? kdtree_buckets_get_at(&tree->buckets, i)->index : -1; \
+        return result; \
     }
 
-#define KDTREE_IMPLEMENT_FREE(N, A, T, VN, VA) \
-    void A##_free(N *kdt) \
-    { \
-        assert(kdt); \
-        kdtree_buckets_free(&kdt->buckets); \
-        memset(kdt, 0, sizeof(*kdt)); \
+#define KDTREE_IMPLEMENT_FREE(N, A, T) \
+    void A##_free(N *tree ) { \
+        assert(tree); \
+        kdtree_buckets_free(&tree->buckets); \
+        memset(tree, 0, sizeof(*tree)); \
     }
-
-
 
 
 #define KDTREE_H

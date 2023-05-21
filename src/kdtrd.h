@@ -3,7 +3,7 @@
 #include "vec1d.h"
 #include "kdtree.h"
 
-KDTREE_INCLUDE(KDTrD, kdtrd, double, Vec1d);
+KDTREE_INCLUDE(KDTrD, kdtrd, double);
 
 void kdtrd_print(KDTrD *kdt, ssize_t root, size_t spaces);
 

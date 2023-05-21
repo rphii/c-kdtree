@@ -34,7 +34,7 @@ int main(void)
     /* create kdtree */
     LOG("creating kdtree of array (%zux%zu)\n", arr.len / dims, dims);
     //printf("make...\n");
-    kdtrd_create(&tree, &arr, dims);
+    kdtrd_create(&tree, arr.items, arr.len, dims, 0, 0);
     //printf("search...\n");
     for(size_t i = 0; i < searches; i++) {
         LOG("[%7zu] ", i);
@@ -47,7 +47,7 @@ int main(void)
         vec1d_print_n(&find, 0, dims, " ");
         double sqrd_dist;
         /* search */
-        ssize_t nearest = kdtrd_nearest(&tree, &find, &sqrd_dist);
+        ssize_t nearest = kdtrd_nearest(&tree, find.items, &sqrd_dist);
         LOG("... found [%9zu] ", nearest);
         vec1d_print_n(&arr, nearest, dims, "");
         LOG(" ± √%.5f\n", sqrd_dist);
