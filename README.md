@@ -14,16 +14,13 @@ The previously stated header provides two defines:
 
 ```c
 #include "kdtree.h"
-KDTREE_INCLUDE(N, A, T, VN);
-KDTREE_IMPLEMENT(N, A, T, VN, VA, M);
+KDTREE_INCLUDE(N, A, T);
+KDTREE_IMPLEMENT(N, A, T);
 ```
 
 1. `N` - **N**ame - name of the resulting KD-tree struct
 2. `A` - **A**bbreviation - of the kdtree functions
 3. `T` - **T**ype - type of one element of your vector
-4. `VN` - **V**ector **N**ame - name of the vector type based around T
-5. `VA` - **V**ector **A**bbreviation - abbreviation of the vector based around T
-6. `M` - **M**ode - storage type, either BY_VAL (by value) or BY_REF (by reference) of the vector VN
 
 ## Example
 I'd split up the INCLUDEs from the IMPLEMENTATIONs. This allows for increased modularity.
