@@ -29,7 +29,7 @@ SOFTWARE. */
 
 #include "vec.h"
 
-#define KDTREE_SWAP(T, x,y)   {T t = x; x = y; y = t; }
+#define KDTREE_SWAP(x,y)   {ssize_t t = x; x = y; y = t; }
 #define KDTREE_DEBUG    1
 
 typedef struct KDTreeNode {
@@ -94,20 +94,20 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         for(;;) { \
             size_t i_pivot = kdtree_buckets_get_at(&tree->buckets, md)->index; \
             T pivot = A##_static_get_at(tree->ref, i_pivot + i_dim, tree->len); \
-            KDTREE_SWAP(T, tree->buckets.items[md]->index, tree->buckets.items[iE - 1]->index); \
+            KDTREE_SWAP(tree->buckets.items[md]->index, tree->buckets.items[iE - 1]->index); \
             store = i0; \
             for(p = i0; p < iE - 1; p++) { \
                 size_t i_p = kdtree_buckets_get_at(&tree->buckets, p)->index; \
                 T p_x = A##_static_get_at(tree->ref, i_p + i_dim, tree->len); \
                 if(p_x < pivot) { \
                     if(p != store) { \
-                        KDTREE_SWAP(T, tree->buckets.items[p]->index, tree->buckets.items[store]->index); \
+                        KDTREE_SWAP(tree->buckets.items[p]->index, tree->buckets.items[store]->index); \
                     } \
                     store++; \
                     assert(store < tree->buckets.len); \
                 } \
             } \
-            KDTREE_SWAP(T, tree->buckets.items[store]->index, tree->buckets.items[iE - 1]->index); \
+            KDTREE_SWAP(tree->buckets.items[store]->index, tree->buckets.items[iE - 1]->index); \
             /* median has duplicate values */ \
             size_t i_s = kdtree_buckets_get_at(&tree->buckets, store)->index; \
             T v_s = A##_static_get_at(tree->ref, i_s + i_dim, tree->len); \
