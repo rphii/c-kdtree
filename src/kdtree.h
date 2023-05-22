@@ -145,7 +145,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         if(!stride) stride = dim; \
         tree->stride = stride; \
         for(size_t i = offset; i < len; i += stride) { \
-            kdtree_buckets_push_back(&tree->buckets, &(KDTreeNode){.index = i + j}); \
+            kdtree_buckets_push_back(&tree->buckets, &(KDTreeNode){.index = i}); \
         } \
         tree->len = tree->buckets.len * tree->dim; \
         tree->root = A##_static_create(tree, 0, tree->buckets.len, 0); \
