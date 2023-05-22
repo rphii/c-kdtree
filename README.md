@@ -4,7 +4,7 @@
 Compile Time Generic Dynamic KD-Tree in C.
 
 ## First Things First
-In main there's an example how one might use the KD-tree.
+In [`main.c`](src/main.c) there's an example how one might use the KD-tree.
 On it's own, you only need [`kdtree.h`](src/kdtree.h) and [`kdtree.c`](src/kdtree.c) (and also [`vec.h`](src/vec.h) - see also [generic vector](https://github.com/rphii/c-vector))
 
 The KD-tree (heavily) relies on a previous implementation of mine, a [generic vector](https://github.com/rphii/c-vector).
