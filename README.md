@@ -52,18 +52,10 @@ KDTREE_INCLUDE(IntKDTree, int_kdtree, int)
 KDTREE_IMPLEMENT(IntKDTree, int_kdtree, int)
 ```
 
-## How to use it
-### Remarks
-For the parameter `T` there's currently no support beyond basic types (excluding anything that can't be directly compared with `<`, `==`, or alike)
-
 ### Available functions
 The A## means the A specified in the two macros.
 
 - `A##_create` create KD-tree from a flattened, row-major order vector
 - `A##_nearest` find nearest point within KD-tree (returns index to original vector)
 - `A##_free` free the created KD-tree when done
-
-
-# todo so I don't forget
-- add support for structs and alike + requires user to pass (optional) comparison functions
 
