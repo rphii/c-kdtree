@@ -58,6 +58,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     \
     int A##_create(N *tree , T *ref, size_t len, size_t dim, size_t offset, size_t stride); \
     ssize_t A##_nearest(N *tree , T *pt, double *squared_dist); \
+    ssize_t A##_range(N *tree, T *pt, size_t *pts, double squared_dist); \
     void A##_free(N *tree ); \
 
 
@@ -69,13 +70,15 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     KDTREE_IMPLEMENT_STATIC_DISTANCE(N, A, T); \
     KDTREE_IMPLEMENT_STATIC_NEAREST(N, A, T); \
     KDTREE_IMPLEMENT_NEAREST(N, A, T); \
+    KDTREE_IMPLEMENT_STATIC_RANGE(N, A, T); \
+    KDTREE_IMPLEMENT_RANGE(N, A, T); \
     KDTREE_IMPLEMENT_FREE(N, A, T); \
 
 #define KDTREE_IMPLEMENT_STATIC_GET_AT(N, A, T) \
     T A##_static_get_at(T *ref, size_t index, size_t len) { \
         if(KDTREE_DEBUG) { \
             if(index >= len) { \
-                printf("\n>> accessing index %zu / len %zu\n", index, len); \
+                printf("\n>> accessing index %zu / len %zu %s\n", index, len, __FILE__); \
             } \
         } \
         assert(index < len); \
@@ -166,47 +169,96 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         if(root < 0) return; \
         /* Get the current node from the KDTree */ \
         KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
+        /*printf("node indx !! %zi\n", node->index);*/ \
         /* Calculate the distance from the target point to the current node */ \
-        double currentDistance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
-        if(*best < 0 || currentDistance < *best_dist) { \
+        double current_distance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
+        if(*best < 0 || current_distance < *best_dist) { \
             *best = root; \
-            *best_dist = currentDistance; \
+            *best_dist = current_distance; \
         } \
-        if(!currentDistance || !*best_dist) { return; } \
+        if(!current_distance || !*best_dist) { return; } \
         /* Calculate the distance from the target point to the splitting dimension of the current node */ \
         T a = A##_static_get_at(tree->ref, node->index + i_dim, tree->len); \
         T b = A##_static_get_at(pt, i_dim, tree->dim); \
-        double splittingDistance = b - a; \
-        double dx2 = splittingDistance * splittingDistance; \
+        double splitting_dist = b - a; \
+        double dx2 = splitting_dist * splitting_dist; \
         /* Traverse the KDTree based on the splitting dimension and the distance to the target */ \
-        ssize_t nearerNode; \
-        ssize_t furtherNode; \
-        if (splittingDistance <= 0) { \
-            nearerNode = node->left; \
-            furtherNode = node->right; \
+        ssize_t nearer_node; \
+        ssize_t further_node; \
+        if (splitting_dist <= 0) { \
+            nearer_node = node->left; \
+            further_node = node->right; \
         } else { \
-            nearerNode = node->right; \
-            furtherNode = node->left; \
+            nearer_node = node->right; \
+            further_node = node->left; \
         } \
         if(++i_dim >= tree->dim) i_dim = 0; \
         /* Search the nearest point in the nearer subtree */ \
-        A##_static_nearest(tree, nearerNode, pt, i_dim, best, best_dist); \
+        A##_static_nearest(tree, nearer_node, pt, i_dim, best, best_dist); \
         /* Search the nearest point in the further subtree if necessary */ \
         if(dx2 >= *best_dist) { return; } \
-        A##_static_nearest(tree, furtherNode, pt, i_dim, best, best_dist); \
+        A##_static_nearest(tree, further_node, pt, i_dim, best, best_dist); \
     }
 
 #define KDTREE_IMPLEMENT_NEAREST(N, A, T); \
-    ssize_t A##_nearest(N *tree, T *pt, double *dist) { \
+    ssize_t A##_nearest(N *tree, T *pt, double *squared_dist) { \
         assert(tree); \
         assert(pt); \
         double temp_dist = 0; \
-        if(!dist) dist = &temp_dist; \
-        *dist = INFINITY; \
+        if(!squared_dist) squared_dist = &temp_dist; \
+        *squared_dist = INFINITY; \
         ssize_t i = -1; \
-        A##_static_nearest(tree, tree->root, pt, 0, &i, dist); \
+        A##_static_nearest(tree, tree->root, pt, 0, &i, squared_dist); \
         ssize_t result = i >= 0 ? kdtree_buckets_get_at(&tree->buckets, i)->index : -1; \
         return result; \
+    }
+
+#define KDTREE_IMPLEMENT_STATIC_RANGE(N, A, T) \
+    static inline int A##_static_range(N* tree, ssize_t root, T *pt, size_t *pts, size_t *i, size_t i_dim, double range_dist) { \
+        if(root < 0) return 0; \
+        /* Get the current node from the KDTree */ \
+        KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
+        /*printf("node indx %zi\n", node->index);*/ \
+        T a = A##_static_get_at(tree->ref, node->index + i_dim, tree->len); \
+        /* Calculate the distance from the target point to the current node */ \
+        double current_distance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
+        if(current_distance < range_dist) { \
+            if(*i >= tree->len) { \
+                return -1; \
+            } \
+            pts[(*i)++] = node->index; \
+        } /* else { return 0; } */ \
+        /* Calculate the distance from the target point to the splitting dimension of the current node */ \
+        T b = A##_static_get_at(pt, i_dim, tree->dim); \
+        double splitting_dist = b - a; \
+        double dx2 = splitting_dist * splitting_dist; \
+        /* Traverse the KDTree based on the splitting dimension and the distance to the target */ \
+        ssize_t nearer_node; \
+        ssize_t further_node; \
+        if (splitting_dist <= 0) { \
+            nearer_node = node->left; \
+            further_node = node->right; \
+        } else { \
+            nearer_node = node->right; \
+            further_node = node->left; \
+        } \
+        if(++i_dim >= tree->dim) i_dim = 0; \
+        /* Search the nearest point in the nearer subtree */ \
+        int result = A##_static_range(tree, nearer_node, pt, pts, i, i_dim, range_dist); \
+        /* Search the nearest point in the further subtree if necessary */ \
+        if(dx2 >= range_dist || result < 0) { return result; } \
+        result = A##_static_range(tree, further_node, pt, pts, i, i_dim, range_dist); \
+        return result; \
+    }
+
+#define KDTREE_IMPLEMENT_RANGE(N, A, T); \
+    ssize_t A##_range(N *tree, T *pt, size_t *pts, double squared_dist) { \
+        assert(tree); \
+        assert(pt); \
+        assert(pts); \
+        size_t used = 0; \
+        ssize_t result = (ssize_t)A##_static_range(tree, tree->root, pt, pts, &used, 0, squared_dist); \
+        return result < 0 ? result : used; \
     }
 
 #define KDTREE_IMPLEMENT_FREE(N, A, T) \
