@@ -58,4 +58,5 @@ The A## means the A specified in the two macros.
 - `A##_create` create KD-tree from a flattened, row-major order vector
 - `A##_nearest` find nearest point within KD-tree (returns index to original vector)
 - `A##_free` free the created KD-tree when done
+- `A##_range` check for points in range (PROTOTYPE)
 
