@@ -24,14 +24,15 @@ int main(void)
 
     size_t dims = 10;
     size_t n = 1000000;
-    size_t searches = 10;
+    size_t searches = 1000000;
     /* create random array to search on */
     LOG("creating random array (%zux%zu)\n", n, dims);
     for(size_t i = 0; i < n * dims; i++) {
         double val = RAND_DOUBLE;
         vec1d_push_back(&arr, val);
     }
-    size_t *range = calloc(n, sizeof(size_t));
+    size_t range_len = 5; /* limit to 5 searches */
+    size_t *range = calloc(range_len, sizeof(size_t));
     /* create kdtree */
     LOG("creating kdtree of array (%zux%zu)\n", arr.len / dims, dims);
     //printf("make...\n");
@@ -55,13 +56,14 @@ int main(void)
         LOG(" ± √%.5f\n", sqrd_dist);
 
         //printf("RANGE\n");
-        ssize_t used = kdtrd_range(&tree, find.items, range, 0.1);
+        ssize_t used = kdtrd_range(&tree, find.items, 0.1, range, range_len);
+        used = used < 0 ? range_len : used;
         LOG("[%7zu] ", i);
         LOG("find : ");
         vec1d_print_n(&find, 0, dims, " ");
         LOG("... range   x%9zi:  \n", used);
         if(used > 0) for(size_t j = 0; j < used; j++) {
-            printf("          [%3zu] ", j);
+            printf("          [%4zu] ", j);
             vec1d_print_n(&arr, range[j], dims, "");
             double d = 0;
             for(size_t l = 0; l < dims; l++) {

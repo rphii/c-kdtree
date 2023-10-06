@@ -58,7 +58,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     \
     int A##_create(N *tree , T *ref, size_t len, size_t dim, size_t offset, size_t stride); \
     ssize_t A##_nearest(N *tree , T *pt, double *squared_dist); \
-    ssize_t A##_range(N *tree, T *pt, size_t *pts, double squared_dist); \
+    ssize_t A##_range(N *tree, T *pt, double squared_dist, size_t *pts, size_t len); \
     void A##_free(N *tree ); \
 
 
@@ -214,7 +214,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     }
 
 #define KDTREE_IMPLEMENT_STATIC_RANGE(N, A, T) \
-    static inline int A##_static_range(N* tree, ssize_t root, T *pt, size_t *pts, size_t *i, size_t i_dim, double range_dist) { \
+    static inline int A##_static_range(N* tree, ssize_t root, T *pt, size_t *pts, size_t len, ssize_t *i, size_t i_dim, double range_dist) { \
         if(root < 0) return 0; \
         /* Get the current node from the KDTree */ \
         KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
@@ -223,7 +223,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         /* Calculate the distance from the target point to the current node */ \
         double current_distance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
         if(current_distance < range_dist) { \
-            if(*i >= tree->len) { \
+            if(*i >= len) { \
                 return -1; \
             } \
             pts[(*i)++] = node->index; \
@@ -244,20 +244,20 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         } \
         if(++i_dim >= tree->dim) i_dim = 0; \
         /* Search the nearest point in the nearer subtree */ \
-        int result = A##_static_range(tree, nearer_node, pt, pts, i, i_dim, range_dist); \
+        int result = A##_static_range(tree, nearer_node, pt, pts, len, i, i_dim, range_dist); \
         /* Search the nearest point in the further subtree if necessary */ \
         if(dx2 >= range_dist || result < 0) { return result; } \
-        result = A##_static_range(tree, further_node, pt, pts, i, i_dim, range_dist); \
+        result = A##_static_range(tree, further_node, pt, pts, len, i, i_dim, range_dist); \
         return result; \
     }
 
 #define KDTREE_IMPLEMENT_RANGE(N, A, T); \
-    ssize_t A##_range(N *tree, T *pt, size_t *pts, double squared_dist) { \
+    ssize_t A##_range(N *tree, T *pt, double squared_dist, size_t *pts, size_t len) { \
         assert(tree); \
         assert(pt); \
         assert(pts); \
-        size_t used = 0; \
-        ssize_t result = (ssize_t)A##_static_range(tree, tree->root, pt, pts, &used, 0, squared_dist); \
+        ssize_t used = 0; \
+        ssize_t result = (ssize_t)A##_static_range(tree, tree->root, pt, pts, len, &used, 0, squared_dist); \
         return result < 0 ? result : used; \
     }
 
