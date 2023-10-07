@@ -59,4 +59,5 @@ The A## means the A specified in the two macros.
 - `A##_nearest` find nearest point within KD-tree (returns index to original vector)
 - `A##_free` free the created KD-tree when done
 - `A##_range` check for points in range
+- `A##_mark_clear` clear marks
 
