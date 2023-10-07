@@ -101,7 +101,7 @@ void ransac(void)
         /* prepare next */
         if(total > best_total) {
             best_total = total;
-            printf("new best total %zu:\n", best_total);
+            printf("new best total %zu\n", best_total);
             best_pt1 = pt1;
             best_pt2 = pt2;
         }
@@ -109,7 +109,7 @@ void ransac(void)
     }
 
     /* print best stat */ {
-    printf("best_total %zu\n", best_total);
+    printf("best_total %zu:\n", best_total);
     double x1 = arr.items[best_pt1*dims+0];
     double y1 = arr.items[best_pt1*dims+1];
     double x2 = arr.items[best_pt2*dims+0];
