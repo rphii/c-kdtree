@@ -232,7 +232,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
             if(*i >= len) { \
                 return -1; \
             } \
-            tree->buckets.items[root]->mark |= (bool)mark; \
+            node->mark |= (bool)mark; \
             if(pts) pts[*i] = node->index; \
             (*i)++; \
         } /* else { return 0; } */ \
