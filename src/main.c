@@ -9,6 +9,7 @@
 #include "kdtrd.h"
 
 #define RAND_DOUBLE     ((double)rand() / (double)RAND_MAX)
+#define OUT_ONLY_DATA   1 // execute: './a > out.txt && python graph.py'
 
 #define LOG_DO          1
 #define LOG(...)        if(LOG_DO) { printf(__VA_ARGS__); }
@@ -17,14 +18,14 @@ void ransac(void)
 {
     size_t dims = 2;
     size_t n = 100000;
-    size_t n_outlier = 100000;
+    size_t n_outlier = 1000;
     size_t n_searches = 50;
     size_t max_search_per = 100000; /* decrease to potentially be faster, but not hit all points in return */
 
-    double y_min = 20;
-    double y_max = 50;
+    double y_min = 2000;
+    double y_max = 5000;
     double x_min = 0;
-    double x_max = 100;
+    double x_max = 10000;
     double tolerance = 5; /* generation tolerance */
     double dist = 10; /* searching distance */
     double step = 2; /* sqrt(x²+y²); delta of how far to "step" when going over y=mx+b */
@@ -40,12 +41,19 @@ void ransac(void)
         double y_val = (y_max - y_min) * (double)i / (double)n + y_min + tolerance * (RAND_DOUBLE - 0.5) * 2;
         vec1d_push_back(&arr, y_val);
         //printf("[%zu] %.1f, %.1f\n", i, x_val, y_val);
+#if OUT_ONLY_DATA
+        printf("%.5f, %.5f\n", x_val, y_val);
+#endif
     }
-
     /* add outliers */
     for(size_t i = 0; i < n_outlier; i++) {
-        double val = RAND_DOUBLE;
-        vec1d_push_back(&arr, val);
+        double val1 = RAND_DOUBLE * (x_max - x_min) + x_min;
+        vec1d_push_back(&arr, val1);
+        double val2 = RAND_DOUBLE * (y_max - y_min) + y_min;
+        vec1d_push_back(&arr, val2);
+#if OUT_ONLY_DATA
+        printf("%.5f, %.5f\n", val1, val2);
+#endif
     }
 
     /* generate tree */
@@ -101,23 +109,30 @@ void ransac(void)
         /* prepare next */
         if(total > best_total) {
             best_total = total;
-            printf("new best total %zu\n", best_total);
+            //printf("new best total %zu\n", best_total);
             best_pt1 = pt1;
             best_pt2 = pt2;
         }
         kdtrd_mark_clear(&tree);
     }
 
+#if !OUT_ONLY_DATA
     /* print best stat */ {
     printf("best_total %zu:\n", best_total);
+#endif
     double x1 = arr.items[best_pt1*dims+0];
     double y1 = arr.items[best_pt1*dims+1];
     double x2 = arr.items[best_pt2*dims+0];
     double y2 = arr.items[best_pt2*dims+1];
     double m = (y2-y1) / (x2-x1);
-    double angle = atan2(y2-y1, x2-x1);
     double b = y1 - m * x1;
+#if !OUT_ONLY_DATA
+    double angle = atan2(y2-y1, x2-x1);
     printf("m %.2f, b %.2f, angle %.3f\n", m, b, angle);
+#else
+    printf("%.5f, %.5f\n", m, b);
+#endif
+#if !OUT_ONLY_DATA
     }
 
     /* print ideal stat */ {
@@ -131,6 +146,7 @@ void ransac(void)
     double b = y1 - m * x1;
     printf("m %.2f, b %.2f, angle %.3f\n", m, b, angle);
     }
+#endif
 
 cleanup:
     kdtrd_free(&tree);
