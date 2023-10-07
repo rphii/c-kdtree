@@ -16,14 +16,18 @@
 void ransac(void)
 {
     size_t dims = 2;
-    size_t n = 1000;
-    size_t n_outlier = 1000;
+    size_t n = 100000;
+    size_t n_outlier = 100000;
+    size_t n_searches = 50;
+    size_t max_search_per = 100000; /* decrease to potentially be faster, but not hit all points in return */
 
     double y_min = 20;
     double y_max = 50;
     double x_min = 0;
     double x_max = 100;
-    double tolerance = 0;
+    double tolerance = 5; /* generation tolerance */
+    double dist = 10; /* searching distance */
+    double step = 2; /* sqrt(x²+y²); delta of how far to "step" when going over y=mx+b */
 
     Vec1d arr = {0};
 
@@ -35,7 +39,7 @@ void ransac(void)
         /* y value */
         double y_val = (y_max - y_min) * (double)i / (double)n + y_min + tolerance * (RAND_DOUBLE - 0.5) * 2;
         vec1d_push_back(&arr, y_val);
-        printf("[%zu] %.1f, %.1f\n", i, x_val, y_val);
+        //printf("[%zu] %.1f, %.1f\n", i, x_val, y_val);
     }
 
     /* add outliers */
@@ -48,15 +52,7 @@ void ransac(void)
     KDTrD tree = {0};
     kdtrd_create(&tree, arr.items, arr.len, dims, 0, 0);
 
-    /* determine starting coordinates (used later in actual ransac) */
-    double step = 2;
-    double dist = 2;
-    //double x0 = ((x_max - x_min) - step * (size_t)((x_max - x_min) / step)) / 2 + x_min;
-    //double y0 = ((y_max - y_min) - step * (size_t)((y_max - y_min) / step)) / 2 + y_min;
-
     /* actual ransac'ing */
-    size_t n_searches = 10;
-    size_t max_search_per = 100;
     double *pt = malloc(sizeof(double) * dims);
     size_t pt1 = 0;
     size_t pt2 = 0;
@@ -68,7 +64,7 @@ void ransac(void)
         pt1 = rand() % (arr.len / dims);
         //pt2 == (pt1 + (rand() % (arr.len / dims - 1))) % (arr.len - dims)
         do { pt2 = rand() % (arr.len / dims); } while(pt2 == pt1);
-        printf("points: %zu, %zu\n", pt1, pt2);
+        //printf("points: %zu, %zu\n", pt1, pt2);
         /* go over line from .. until */
         double x1 = arr.items[pt1*dims+0];
         double y1 = arr.items[pt1*dims+1];
@@ -80,7 +76,7 @@ void ransac(void)
         // b = y - m * x
         // x = (y-b) / m
         double b = y1 - m * x1;
-        printf("pt1 [%.1f, %.1f], pt2 [%.1f, %.1f], m %.2f, b %.2f, angle %.3f\n", x1, y1, x2, y2, m, b, angle);
+        //printf("pt1 [%.1f, %.1f], pt2 [%.1f, %.1f], m %.2f, b %.2f, angle %.3f\n", x1, y1, x2, y2, m, b, angle);
         /* determine beginning of line */
         double x = x_min;
         double y = m * x + b;
@@ -97,7 +93,7 @@ void ransac(void)
             pt[0] = x;
             pt[1] = y;
             ssize_t found = kdtrd_range(&tree, pt, dist*dist, true, 0, max_search_per);
-            printf("[%.1f, %.1f], found %zi\n", x, y, found);
+            //printf("[%.1f, %.1f], found %zi\n", x, y, found);
             total += found < 0 ? max_search_per : found;
             x += step * cos(angle);
             y += step * sin(angle);
@@ -105,14 +101,14 @@ void ransac(void)
         /* prepare next */
         if(total > best_total) {
             best_total = total;
-            printf("new best total %zu\n", best_total);
+            printf("new best total %zu:\n", best_total);
             best_pt1 = pt1;
             best_pt2 = pt2;
         }
         kdtrd_mark_clear(&tree);
     }
 
-    /* print best stat */
+    /* print best stat */ {
     printf("best_total %zu\n", best_total);
     double x1 = arr.items[best_pt1*dims+0];
     double y1 = arr.items[best_pt1*dims+1];
@@ -121,7 +117,20 @@ void ransac(void)
     double m = (y2-y1) / (x2-x1);
     double angle = atan2(y2-y1, x2-x1);
     double b = y1 - m * x1;
-    printf("pt1 [%.1f, %.1f], pt2 [%.1f, %.1f], m %.2f, b %.2f, angle %.3f\n", x1, y1, x2, y2, m, b, angle);
+    printf("m %.2f, b %.2f, angle %.3f\n", m, b, angle);
+    }
+
+    /* print ideal stat */ {
+    printf("ideal:\n");
+    double x1 = x_min;
+    double y1 = y_min;
+    double x2 = x_max;
+    double y2 = y_max;
+    double m = (y2-y1) / (x2-x1);
+    double angle = atan2(y2-y1, x2-x1);
+    double b = y1 - m * x1;
+    printf("m %.2f, b %.2f, angle %.3f\n", m, b, angle);
+    }
 
 cleanup:
     kdtrd_free(&tree);
