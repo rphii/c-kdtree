@@ -22,7 +22,7 @@ with open("data.txt", "r") as file:
 
 
 # Create a line plot for the data
-plt.scatter(x_values, y_values, marker='o', label='Data')
+plt.scatter(x_values, y_values, marker='x', label='Data')
 
 # Define the parameters for the linear equation y = mx + b
 

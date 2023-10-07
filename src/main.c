@@ -9,7 +9,7 @@
 #include "kdtrd.h"
 
 #define RAND_DOUBLE     ((double)rand() / (double)RAND_MAX)
-#define OUT_ONLY_DATA   1 // execute: './a > out.txt && python graph.py'
+#define OUT_ONLY_DATA   1 // execute: './a > data.txt && python graph.py'
 
 #define LOG_DO          1
 #define LOG(...)        if(LOG_DO) { printf(__VA_ARGS__); }
@@ -18,7 +18,7 @@ void ransac(void)
 {
     size_t dims = 2;
     size_t n = 100000;
-    size_t n_outlier = 1000;
+    size_t n_outlier = 10000;
     size_t n_searches = 50;
     size_t max_search_per = 100000; /* decrease to potentially be faster, but not hit all points in return */
 
