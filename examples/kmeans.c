@@ -112,19 +112,19 @@ void kmeans_apply(unsigned char *data, int w, int h, int ch, unsigned int n_clus
 
 #if DITHER
                 if(x+1 < w) {
-                    uint8_t *p = &data[((y+0) * w + (x+1)) * ch];
+                    uint8_t *p = &data[((y+0) * w + (x+1)) * ch+j];
                     *p = clamp((double)*p + error * 7./16., 0, 255);
                 }
                 if(x >= 1 && y+1 < h) {
-                    uint8_t *p = &data[((y+1) * w + (x-1)) * ch];
+                    uint8_t *p = &data[((y+1) * w + (x-1)) * ch+j];
                     *p = clamp((double)*p + error * 3./16., 0, 255);
                 }
                 if(y+1 < h) {
-                    uint8_t *p = &data[((y+1) * w + (x+0)) * ch];
+                    uint8_t *p = &data[((y+1) * w + (x+0)) * ch+j];
                     *p = clamp((double)*p + error * 5./16., 0, 255);
                 }
                 if(x+1 < w && y+1 < h) {
-                    uint8_t *p = &data[((y+1) * w + (x+1)) * ch];
+                    uint8_t *p = &data[((y+1) * w + (x+1)) * ch+j];
                     *p = clamp((double)*p + error * 1./16., 0, 255);
                 }
 #endif
