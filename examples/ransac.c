@@ -20,7 +20,7 @@ void ransac(void)
     size_t n = 100000;
     size_t n_outlier = 10000;
     size_t n_searches = 50;
-    size_t max_search_per = 100000; /* decrease to potentially be faster, but not hit all points in return */
+    size_t max_search_per = 100; /* decrease to potentially be faster, but not hit all points in return */
 
     double y_min = 2000;
     double y_max = 5000;
@@ -150,6 +150,7 @@ void ransac(void)
 
 cleanup:
     kdtrd_free(&tree);
+    free(pt);
 }
 
 

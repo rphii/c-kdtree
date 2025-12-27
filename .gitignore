@@ -1,5 +1,5 @@
 obj
-a
+*.out
 *.vim
 *.swp
 *.txt
