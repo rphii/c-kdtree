@@ -1,7 +1,7 @@
 #ifndef KDTRD_H
 
 #include "vec1d.h"
-#include "kdtree.h"
+#include "../src/kdtree.h"
 
 KDTREE_INCLUDE(KDTrD, kdtrd, double);
 

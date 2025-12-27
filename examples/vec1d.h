@@ -3,7 +3,7 @@
 #define LOG_DO          1
 #define LOG(...)        if(LOG_DO) { printf(__VA_ARGS__); }
 
-#include "vec.h"
+#include "../src/vec.h"
 
 VEC_INCLUDE(Vec1d, vec1d, double, BY_VAL);
 
