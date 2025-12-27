@@ -113,19 +113,19 @@ void kmeans_apply(unsigned char *data, int w, int h, int ch, unsigned int n_clus
 #if DITHER
                 if(x+1 < w) {
                     uint8_t *p = &data[((y+0) * w + (x+1)) * ch+j];
-                    *p = clamp((double)*p + error * 7./16., 0, 255);
+                    *p = clamp(round((double)*p + error * 7./16.), 0, 255);
                 }
                 if(x >= 1 && y+1 < h) {
                     uint8_t *p = &data[((y+1) * w + (x-1)) * ch+j];
-                    *p = clamp((double)*p + error * 3./16., 0, 255);
+                    *p = clamp(round((double)*p + error * 3./16.), 0, 255);
                 }
                 if(y+1 < h) {
                     uint8_t *p = &data[((y+1) * w + (x+0)) * ch+j];
-                    *p = clamp((double)*p + error * 5./16., 0, 255);
+                    *p = clamp(round((double)*p + error * 5./16.), 0, 255);
                 }
                 if(x+1 < w && y+1 < h) {
                     uint8_t *p = &data[((y+1) * w + (x+1)) * ch+j];
-                    *p = clamp((double)*p + error * 1./16., 0, 255);
+                    *p = clamp(round((double)*p + error * 1./16.), 0, 255);
                 }
 #endif
             }
@@ -254,10 +254,11 @@ bool kmeans_data(uint8_t *centroids_out, double *data, int w, int h, int ch, uns
 }
 
 void kmeans_image_file(char *filename, unsigned int n_clusters) {
-    int w1, h1, ch, w, h;
+    int w1, h1, ch, w, h, w2, h2;
     unsigned char *data1 = stbi_load(filename, &w1, &h1, &ch, 0);
     So path_out = so("results");
-    so_path_join(&path_out, path_out, so_get_nodir(so_l(filename)));
+    so_path_join(&path_out, path_out, so_get_basename(so_l(filename)));
+    so_extend(&path_out, so(".png"));
     if(data1) {
 #if DEBUG
         printf("read ok: %s\n", filename);
@@ -281,13 +282,18 @@ void kmeans_image_file(char *filename, unsigned int n_clusters) {
 #endif
 
         if(ok) {
-            kmeans_apply(data1, w1, h1, ch, n_clusters, centroids);
+            w2 = ceil((double)w1 / 2.0);
+            h2 = ceil((double)h1 / 2.0);
+            unsigned char *data2 = malloc(w2 * h2 * ch);
+            stbir_resize_uint8_linear(data1, w1, h1, 0, data2, w2, h2, 0, ch);
+            kmeans_apply(data2, w2, h2, ch, n_clusters, centroids);
             char *cfileout = so_dup(path_out);
-            stbi_write_png(cfileout, w1, h1, ch, data1, 0);
+            stbi_write_png(cfileout, w2, h2, ch, data2, 0);
+            free(data2);
             free(cfileout);
-            free(ddata);
-            free(data);
         }
+        free(ddata);
+        free(data);
 
     } else {
         printf("failed opening file: %s\n", filename);
