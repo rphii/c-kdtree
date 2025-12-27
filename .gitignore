@@ -3,4 +3,6 @@ obj
 *.vim
 *.swp
 *.txt
+*.png
+*.jpg
 

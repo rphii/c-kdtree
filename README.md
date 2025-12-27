@@ -4,11 +4,12 @@
 Compile Time Generic Dynamic KD-Tree in C.
 
 ## First Things First
-In [`main.c`](src/main.c) there's an example how one might use the KD-tree.
-On it's own, you only need [`kdtree.h`](src/kdtree.h) and [`kdtree.c`](src/kdtree.c) (and also [`vec.h`](src/vec.h) - see also [generic vector](https://github.com/rphii/c-vector))
+- In [`examples/ransac.c`](examples/ransac.c) there's an example how one might use the KD-tree + ransac.
+- In [`examples/kmeans.c`](examples/kmeans.c) there's an example how one might use the KD-tree + kmeans. (the example exploded in code)
 
-The KD-tree (heavily) relies on a previous implementation of mine, a [generic vector](https://github.com/rphii/c-vector).
-To create a custom KD-tree, one needs to have an array. Also to be noted, the KD-tree works on flattened, row-major order array/vector.
+On it's own, you only need [`kdtree.h`](src/kdtree.h). The implementation however depends on [`rphii/rlc`](https://github.com/rphii/rlc).
+
+The KD-tree works on flattened, row-major order arrays/vectors.
 
 The previously stated header provides two defines:
 

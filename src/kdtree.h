@@ -28,7 +28,9 @@ SOFTWARE. */
 #include <stdbool.h>
 #include <math.h> /* INFINITY */
 
-#include "vec.h"
+//#include "vec.h"
+#include <rlc/array.h>
+#include <rlc/err.h>
 
 #define KDTREE_SWAP(x,y)   {ssize_t t = x; x = y; y = t; }
 #define KDTREE_DEBUG    1
@@ -40,7 +42,7 @@ typedef struct KDTreeNode {
     bool mark;
 } KDTreeNode;
 
-VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
+//VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 
 /*
  * N = name of the kdtree struct
@@ -50,7 +52,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 
 #define KDTREE_INCLUDE(N, A, T) \
     typedef struct N { \
-        KDTreeBuckets buckets; \
+        KDTreeNode *buckets; \
         T* ref; \
         size_t len;   /* length of ref array */ \
         size_t dim;   /* count of dimensions */ \
@@ -81,9 +83,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 #define KDTREE_IMPLEMENT_STATIC_GET_AT(N, A, T) \
     T A##_static_get_at(T *ref, size_t index, size_t len) { \
         if(KDTREE_DEBUG) { \
-            if(index >= len) { \
-                printf("\n>> accessing index %zu / len %zu %s\n", index, len, __FILE__); \
-            } \
+            ASSERT(index < len, "accessing index %zu / len %zu", index, len); \
         } \
         assert(index < len); \
         return ref[index]; \
@@ -99,26 +99,26 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         size_t store = 0; \
         size_t p = 0; \
         for(;;) { \
-            size_t i_pivot = kdtree_buckets_get_at(&tree->buckets, md)->index; \
+            size_t i_pivot = tree->buckets[md].index; \
             T pivot = A##_static_get_at(tree->ref, i_pivot + i_dim, tree->len); \
-            KDTREE_SWAP(tree->buckets.items[md]->index, tree->buckets.items[iE - 1]->index); \
+            KDTREE_SWAP(tree->buckets[md].index, tree->buckets[iE - 1].index); \
             store = i0; \
             for(p = i0; p < iE - 1; p++) { \
-                size_t i_p = kdtree_buckets_get_at(&tree->buckets, p)->index; \
+                size_t i_p = tree->buckets[p].index; \
                 T p_x = A##_static_get_at(tree->ref, i_p + i_dim, tree->len); \
                 if(p_x < pivot) { \
                     if(p != store) { \
-                        KDTREE_SWAP(tree->buckets.items[p]->index, tree->buckets.items[store]->index); \
+                        KDTREE_SWAP(tree->buckets[p].index, tree->buckets[store].index); \
                     } \
                     store++; \
-                    assert(store < tree->buckets.len); \
+                    assert(store < array_len(tree->buckets)); \
                 } \
             } \
-            KDTREE_SWAP(tree->buckets.items[store]->index, tree->buckets.items[iE - 1]->index); \
+            KDTREE_SWAP(tree->buckets[store].index, tree->buckets[iE - 1].index); \
             /* median has duplicate values */ \
-            size_t i_s = kdtree_buckets_get_at(&tree->buckets, store)->index; \
+            size_t i_s = tree->buckets[store].index; \
             T v_s = A##_static_get_at(tree->ref, i_s + i_dim, tree->len); \
-            size_t i_m = kdtree_buckets_get_at(&tree->buckets, md)->index; \
+            size_t i_m = tree->buckets[md].index; \
             T v_m = A##_static_get_at(tree->ref, i_m + i_dim, tree->len); \
             if(v_s == v_m) { return md; } \
             if(store > md) iE = store; \
@@ -134,7 +134,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         ssize_t m = A##_static_median(tree, i0, iE, i_dim); \
         if(m >= 0) { \
             i_dim = (i_dim + 1) % tree->dim; \
-            KDTreeNode *n = kdtree_buckets_get_at(&tree->buckets, m); \
+            KDTreeNode *n = array_it(tree->buckets, m); \
             n->left = A##_static_create(tree, i0, m, i_dim); \
             n->right = A##_static_create(tree, m + 1, iE, i_dim); \
         } \
@@ -147,15 +147,14 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         assert(tree); \
         assert(ref); \
         tree->ref = ref; \
-        tree->len = len; \
         tree->dim = dim; \
         if(!stride) stride = dim; \
         tree->stride = stride; \
         for(size_t i = offset; i < len; i += stride) { \
-            kdtree_buckets_push_back(&tree->buckets, &(KDTreeNode){.index = i}); \
+            array_push(tree->buckets, (KDTreeNode){.index = i}); \
         } \
-        tree->len = tree->buckets.len * tree->dim; \
-        tree->root = A##_static_create(tree, 0, tree->buckets.len, 0); \
+        tree->len = array_len(tree->buckets) * tree->dim; \
+        tree->root = A##_static_create(tree, 0, array_len(tree->buckets), 0); \
         return 0; \
     }
 
@@ -172,7 +171,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     static inline void A##_static_nearest(N* tree, ssize_t root, T* pt, size_t i_dim, ssize_t *best, double *best_dist, bool mark) { \
         if(root < 0) return; \
         /* Get the current node from the KDTree */ \
-        KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
+        KDTreeNode* node = array_it(tree->buckets, root); \
         /*printf("node indx !! %zi\n", node->index);*/ \
         /* Calculate the distance from the target point to the current node */ \
         double current_distance = A##_static_distance(tree->dim, pt, &(tree->ref[node->index])); \
@@ -213,7 +212,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
         *squared_dist = INFINITY; \
         ssize_t i = -1; \
         A##_static_nearest(tree, tree->root, pt, 0, &i, squared_dist, mark); \
-        KDTreeNode *node = kdtree_buckets_get_at(&tree->buckets, i); \
+        KDTreeNode *node = array_it(tree->buckets, i); \
         ssize_t result = i >= 0 ? node->index : -1; \
         node->mark |= (bool)mark; \
         return result; \
@@ -223,7 +222,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
     static inline int A##_static_range(N* tree, ssize_t root, T *pt, size_t *pts, size_t len, ssize_t *i, size_t i_dim, double range_dist, bool mark) { \
         if(root < 0) return 0; \
         /* Get the current node from the KDTree */ \
-        KDTreeNode* node = kdtree_buckets_get_at(&tree->buckets, root); \
+        KDTreeNode* node = array_it(tree->buckets, root); \
         /*printf("node indx %zi\n", node->index);*/ \
         T a = A##_static_get_at(tree->ref, node->index + i_dim, tree->len); \
         /* Calculate the distance from the target point to the current node */ \
@@ -271,8 +270,9 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 #define KDTREE_IMPLEMENT_CLEAR_MARK(N, A, T); \
     void A##_mark_clear(N *tree) { \
         assert(tree); \
-        for(size_t i = 0; i < tree->buckets.len; i++) { \
-            KDTreeNode *node = kdtree_buckets_get_at(&tree->buckets, i); \
+        size_t len = array_len(tree->buckets); \
+        for(size_t i = 0; i < len; i++) { \
+            KDTreeNode *node = array_it(tree->buckets, i); \
             node->mark = false; \
         } \
     }
@@ -280,7 +280,7 @@ VEC_INCLUDE(KDTreeBuckets, kdtree_buckets, KDTreeNode, BY_REF);
 #define KDTREE_IMPLEMENT_FREE(N, A, T) \
     void A##_free(N *tree ) { \
         assert(tree); \
-        kdtree_buckets_free(&tree->buckets); \
+        array_free(tree->buckets); \
         memset(tree, 0, sizeof(*tree)); \
     }
 
