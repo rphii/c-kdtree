@@ -84,16 +84,51 @@ void counts_print(unsigned int *counts, int len) {
 #endif
 }
 
+double clamp(double v, double min, double max) {
+    if(v < min) return min;
+    if(v > max) return max;
+    return v;
+}
+
+#define DITHER  1
+
 void kmeans_apply(unsigned char *data, int w, int h, int ch, unsigned int n_clusters, uint8_t *centroids) {
+
+    double error;
 
     Kd_u8 kd = {0};
     kd_u8_create(&kd, centroids, ch * n_clusters, ch, 0, 0);
-    for(size_t i = 0; i < w * h; ++i) {
-        unsigned char *pt = &data[i * ch];
-        size_t i = kd_u8_nearest(&kd, pt, 0, false);
-        unsigned char *ct = &centroids[i];
-        for(size_t j = 0; j < ch; ++j) {
-            pt[j] = ct[j];
+    for(size_t y = 0; y < h; ++y) {
+        for(size_t x = 0; x < w; ++x) {
+            size_t i = y * w + x;
+            unsigned char *pt = &data[i * ch];
+            size_t i_near = kd_u8_nearest(&kd, pt, 0, false);
+            unsigned char *ct = &centroids[i_near];
+            for(size_t j = 0; j < ch; ++j) {
+                /* collect error for dithering */
+                error = (double)pt[j] - (double)ct[j];
+                /* apply current value */
+                pt[j] = ct[j];
+
+#if DITHER
+                if(x+1 < w) {
+                    uint8_t *p = &data[((y+0) * w + (x+1)) * ch];
+                    *p = clamp((double)*p + error * 7./16., 0, 255);
+                }
+                if(x >= 1 && y+1 < h) {
+                    uint8_t *p = &data[((y+1) * w + (x-1)) * ch];
+                    *p = clamp((double)*p + error * 3./16., 0, 255);
+                }
+                if(y+1 < h) {
+                    uint8_t *p = &data[((y+1) * w + (x+0)) * ch];
+                    *p = clamp((double)*p + error * 5./16., 0, 255);
+                }
+                if(x+1 < w && y+1 < h) {
+                    uint8_t *p = &data[((y+1) * w + (x+1)) * ch];
+                    *p = clamp((double)*p + error * 1./16., 0, 255);
+                }
+#endif
+            }
         }
     }
     kd_u8_free(&kd);
